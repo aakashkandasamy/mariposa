@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import nltk
 from typing import List, Dict
-from app.core.services.sentiment_analyzer import SentimentAnalyzer
+from core.services.sentiment_analyzer import SentimentAnalyzer
 
 def analyze_journal_entry(text: str) -> dict:
     """Analyze journal entry using our custom SentimentAnalyzer"""

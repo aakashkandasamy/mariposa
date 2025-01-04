@@ -1,0 +1,3 @@
+[server]
+# If you need to add your project to Python path
+pythonPath = "." 

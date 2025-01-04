@@ -1,9 +1,9 @@
 import streamlit as st
-from app.core.models.schemas import PatientInput, Schedule
-from app.core.models.severity_level import SeverityLevel
-from app.core.services.plan_service import TherapyPlanGenerator
-from app.core.services.calendar_planner import TherapyCalendarPlanner
-from app.core.utils.exceptions import NoMatchingConditionsError
+from core.models.schemas import PatientInput, Schedule
+from core.models.severity_level import SeverityLevel
+from core.services.plan_service import TherapyPlanGenerator
+from core.services.calendar_planner import TherapyCalendarPlanner
+from core.utils.exceptions import NoMatchingConditionsError
 from typing import List, Dict
 from datetime import datetime
 import pandas as pd
