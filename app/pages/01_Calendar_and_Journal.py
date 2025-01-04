@@ -38,34 +38,67 @@ def show_progress_charts(journal_entries):
         x=df['date'],
         y=[entry['score'] for entry in df['sentiment']],
         mode='lines+markers',
-        name='Sentiment Score'
+        name='Emotional State Score'
     ))
     fig_sentiment.update_layout(
         title='Emotional Well-being Trend',
-        yaxis_title='Mood Score',
+        yaxis_title='Emotional State Score (0-1)',
         yaxis=dict(range=[0, 1])
     )
     st.plotly_chart(fig_sentiment)
     
-    # Create positive/negative word count chart
-    fig_phrases = go.Figure(data=[
+    # Create emotions frequency chart
+    all_emotions = []
+    emotion_counts = {}
+    
+    # Collect all emotions and their frequencies
+    for entry in journal_entries:
+        emotions = entry['sentiment']['emotions']
+        for emotion in emotions:
+            if emotion not in emotion_counts:
+                emotion_counts[emotion] = 0
+            emotion_counts[emotion] += 1
+            if emotion not in all_emotions:
+                all_emotions.append(emotion)
+    
+    # Create bar chart for emotions
+    fig_emotions = go.Figure(data=[
         go.Bar(
-            name='Positive Words', 
-            x=df['date'], 
-            y=df['details'].apply(lambda x: x['positive_words'])
-        ),
-        go.Bar(
-            name='Negative Words', 
-            x=df['date'], 
-            y=df['details'].apply(lambda x: x['negative_words'])
+            name='Frequency',
+            x=list(emotion_counts.keys()),
+            y=list(emotion_counts.values())
         )
     ])
-    fig_phrases.update_layout(
-        title='Expression Pattern Analysis',
-        barmode='group',
-        yaxis_title='Word Count'
+    fig_emotions.update_layout(
+        title='Emotional Pattern Analysis',
+        xaxis_title='Emotions',
+        yaxis_title='Frequency'
     )
-    st.plotly_chart(fig_phrases)
+    st.plotly_chart(fig_emotions)
+    
+    # Create risk level trend if applicable
+    risk_levels = {'none': 0, 'low': 0.33, 'medium': 0.66, 'high': 1}
+    risk_data = [risk_levels[entry['sentiment']['risk_level']] 
+                 for entry in journal_entries if entry['sentiment']['risk_level'] != 'unknown']
+    
+    if any(level > 0 for level in risk_data):
+        fig_risk = go.Figure()
+        fig_risk.add_trace(go.Scatter(
+            x=df['date'],
+            y=risk_data,
+            mode='lines+markers',
+            name='Risk Level'
+        ))
+        fig_risk.update_layout(
+            title='Risk Level Trend',
+            yaxis_title='Risk Level',
+            yaxis=dict(
+                range=[0, 1],
+                ticktext=['None', 'Low', 'Medium', 'High'],
+                tickvals=[0, 0.33, 0.66, 1]
+            )
+        )
+        st.plotly_chart(fig_risk)
 
 def show_technique_details(technique: dict, session: dict):
     """Display technique details in a structured format"""
@@ -352,6 +385,16 @@ def show_journal_history(journal_entries):
             
             st.markdown("---")
 
+def test_api_connection():
+    st.markdown("### Testing API Connection")
+    analyzer = SentimentAnalyzer()
+    
+    with st.spinner("Testing OpenAI API connection..."):
+        if analyzer.test_connection():
+            st.success("✅ OpenAI API connection successful!")
+        else:
+            st.error("❌ OpenAI API connection failed. Please check your API key and billing status.")
+
 def main():
     st.title("🗓️ Therapy Calendar & Journal")
     
@@ -427,6 +470,10 @@ def main():
         # Show detailed journal history
         if st.session_state.journal_entries:
             show_journal_history(st.session_state.journal_entries)
+
+    # Add this at the start of the main() function:
+    if st.sidebar.button("Test API Connection"):
+        test_api_connection()
 
 if __name__ == "__main__":
     main() 
