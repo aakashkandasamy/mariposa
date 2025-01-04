@@ -1,76 +1,114 @@
-# Mariposa
+🦋 Mariposa - AI-Powered Therapy Plan Optimizer
+Mariposa is an intelligent therapy planning and journaling application that helps users track their mental health journey and receive personalized therapy recommendations.
 
-An AI-powered therapy plan optimization system that generates personalized therapy plans based on user inputs and clinical best practices. Mariposa (Spanish for "butterfly") symbolizes transformation and growth through therapeutic journey.
+🌟 Core Services
+Plan Service (plan_service.py)
+Generates personalized therapy plans based on user input
+Analyzes symptoms and severity levels
+Recommends therapy types and techniques
+Integrates with research service for evidence-based recommendations
+Research Service (research_service.py)
+Provides access to DSM-5 criteria
+Manages disorder classifications
+Delivers relevant research articles
+Supports evidence-based decision making
+Calendar Planner (calendar_planner.py)
+Creates structured weekly therapy schedules
+Balances session frequency based on severity
+Integrates techniques into daily activities
+Manages therapy session timing and duration
+Sentiment Analysis (sentiment_analyzer.py)
+Uses NLTK's VADER for sophisticated sentiment analysis:
+Emotion detection through keyword matching
+Risk level assessment
+Sentiment scoring and normalization
+Contextual suggestions based on mood
 
-## Research Integration Features
+📱 User Interface Components
+Main Application (main.py)
+Initial symptom assessment
+Therapy plan generation
+Crisis detection system
+Treatment recommendations display
+Calendar & Journal (01_Calendar_and_Journal.py)
+Features:
+Interactive calendar views (daily/monthly)
+Journal entry system with sentiment analysis
+Progress tracking and visualization
+Activity scheduling and management
 
-Mariposa now integrates evidence-based research and clinical guidelines through:
+🛠️ Technical Stack
+Core Dependencies:
+streamlit: Web interface framework
+pandas: Data handling and analysis
+numpy: Numerical operations
+scikit-learn: ML utilities
+plotly: Interactive charts
+nltk: Natural language processing with VADER sentiment analysis
+Key Visualizations:
+Emotional Trend Charts
+Emotion Frequency Analysis
+3. Risk Level Monitoring
+Daily Mood Tracking
 
-### 1. Google Scholar Integration
-- Real-time fetching of recent research papers on treatment effectiveness
-- Caching system to store research results and respect API limits
-- Analysis of treatment mentions and effectiveness from academic literature
+🔍 Sentiment Analysis System
+VADER Implementation:
+Compound sentiment scoring (-1 to 1)
+Normalized to 0-1 range for UI
+Emotion detection through keyword matching
+Risk level assessment
+Risk Assessment Levels:
+High: Immediate intervention needed
+Medium: Increased monitoring required
+Low: General support recommended
+None: Standard monitoring
 
-### 2. DSM-5 Integration
-- Comprehensive disorder criteria from DSM-5
-- Evidence-based treatment recommendations
-- Standardized treatment goals and techniques
-- Severity-based session frequency guidelines
+📊 Data Models
+Patient Input Structure:
+Symptoms description
+Severity level assessment
+Schedule availability
+Treatment preferences
+Therapy Plan Components:
+Treatment recommendations
+Session scheduling
+Technique assignments
+Progress tracking
 
-### 3. Treatment Plan Generation
-The system combines multiple data sources to create personalized plans:
-- Research-backed therapy recommendations
-- DSM-5 clinical guidelines
-- Severity-based adjustments
-- Schedule optimization
+🚀 Getting Started
+Clone the repository:
+git clone https://github.com/aakashkandasamy/mariposa.git
+cd mariposa
+Install dependencies:
+pip install -r requirements.txt
+Run the application:
+streamlit run app/main.py
 
-### 4. Evidence-Based Features
-- Treatment effectiveness scoring based on research mentions
-- Integration of clinical best practices
-- Dynamic goal generation based on disorder specifics
-- Research-backed technique recommendations
-
-## Project Structure
-
+📁 Project Structure
 mariposa/
-├── api/
-│ ├── init.py
-│ ├── main.py # FastAPI application entry point
-│ ├── routes/
-│ │ ├── init.py
-│ │ └── therapy_routes.py # API endpoints
-│ └── middleware/
-│ ├── init.py
-│ └── error_handler.py
-├── core/
-│ ├── init.py
-│ ├── config.py # Configuration settings
+├── app/
+│ ├── main.py # Main application
+│ ├── pages/
+│ │ └── 01_Calendar_and_Journal.py # Calendar & journal
+│ └── core/
 │ ├── models/
-│ │ ├── init.py
-│ │ ├── schemas.py # Pydantic models
-│ │ └── database.py # Database models
-│ └── services/
-│ ├── init.py
-│ ├── nlp_service.py # NLP processing
-│ └── plan_service.py # Plan generation logic
-├── data/
-│ ├── mock/
-│ │ ├── disorders.json # Mock disorder data
-│ │ └── treatments.json # Mock treatment data
-│ └── ml_models/ # Directory for trained models
-├── tests/
-│ ├── init.py
-│ ├── conftest.py
-│ ├── test_api/
-│ └── test_services/
-├── utils/
-│ ├── init.py
-│ ├── constants.py
-│ └── helpers.py
-├── .env.example
-├── .gitignore
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── README.md
+│ │ ├── schemas.py # Data models
+│ │ └── severity_level.py # Severity enums
+│ ├── services/
+│ │ ├── plan_service.py # Therapy planning
+│ │ ├── research_service.py # Research integration
+│ │ ├── calendar_planner.py # Schedule management
+│ │ └── sentiment_analyzer.py # Sentiment analysis
+│ └── utils/
+│ └── exceptions.py # Custom exceptions
+├── requirements.txt # Dependencies
+└── setup.py # Package config
 
+🔒 Privacy & Security
+Local session state storage
+No external API dependencies
+No personal data collection
+Secure data handling
+
+🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
