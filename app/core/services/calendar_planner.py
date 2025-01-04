@@ -13,97 +13,94 @@ class TherapyCalendarPlanner:
                                session_frequency: str,
                                techniques: List[str],
                                start_date: datetime = None) -> List[Dict]:
-        if not availability or not techniques:
-            return []  # Return empty schedule if no availability or techniques
-
         if start_date is None:
             start_date = datetime.now()
 
-        # Debug print
-        print(f"Generating schedule with: {availability}, {therapy_type}, {session_frequency}, {techniques}")
-
-        # Convert day names to datetime objects for the next occurrence
-        available_days = []
-        for day in availability:
-            day_num = list(calendar.day_name).index(day)
-            days_ahead = day_num - start_date.weekday()
-            if days_ahead <= 0:
-                days_ahead += 7
-            next_date = start_date + timedelta(days=days_ahead)
-            available_days.append(next_date)
-
-        # Sort available days
-        available_days.sort()
-
-        # Debug print
-        print(f"Available dates: {[d.strftime('%Y-%m-%d') for d in available_days]}")
-
-        # Determine number of sessions per week based on frequency
+        # Create a structured weekly schedule
+        schedule = []
+        
+        # Map frequency to number of sessions per week
         sessions_per_week = {
-            "bi-weekly": 0.5,
+            "bi-weekly": 1,  # Every other week
             "weekly": 1,
             "twice-weekly": 2,
             "intensive outpatient": 3,
-            "intensive support": 3,
+            "intensive support": 5,
             "immediate intervention": 5
-        }.get(session_frequency.lower(), 1)  # Added .lower() for case insensitivity
-
-        # Calculate number of sessions needed
-        if sessions_per_week < 1:  # bi-weekly
-            sessions_needed = 2  # 2 sessions per month
-        else:
-            sessions_needed = int(sessions_per_week * 4)  # 4 weeks of therapy
-
-        # Generate schedule
-        schedule = []
-        techniques_cycle = techniques.copy()
+        }
         
-        # Generate 4 weeks of schedule
-        current_date = start_date
-        session_count = 0
-        week = 0
-
-        while session_count < sessions_needed and week < 4:
-            # For bi-weekly, only schedule every other week
-            if sessions_per_week < 1 and week % 2 == 1:
-                week += 1
-                current_date += timedelta(weeks=1)
-                continue
-
-            # Get available days for this week
-            week_days = [day + timedelta(weeks=week) for day in available_days]
+        weekly_sessions = sessions_per_week.get(session_frequency, 1)
+        
+        # Generate 4-week schedule
+        for week in range(4):
+            current_week_start = start_date + timedelta(weeks=week)
             
-            # Calculate sessions for this week
-            week_sessions = min(int(sessions_per_week), sessions_needed - session_count)
-            week_sessions = min(week_sessions, len(week_days))
+            # Morning routine (daily)
+            for day in range(7):
+                current_date = current_week_start + timedelta(days=day)
+                
+                # Morning routine
+                schedule.append({
+                    "date": current_date.strftime("%Y-%m-%d"),
+                    "day": current_date.strftime("%A"),
+                    "time": "08:00",
+                    "activity": "Morning Mindfulness",
+                    "type": "Daily Practice",
+                    "duration": "15 minutes",
+                    "technique_details": self.technique_db.get_technique_info("Mindfulness Meditation")
+                })
+                
+                # Evening routine
+                schedule.append({
+                    "date": current_date.strftime("%Y-%m-%d"),
+                    "day": current_date.strftime("%A"),
+                    "time": "20:00",
+                    "activity": "Progressive Muscle Relaxation",
+                    "type": "Daily Practice",
+                    "duration": "15 minutes",
+                    "technique_details": self.technique_db.get_technique_info("Progressive Muscle Relaxation")
+                })
+
+            # Main therapy sessions
+            available_days = sorted([list(calendar.day_name).index(day) for day in availability])
+            session_days = available_days[:weekly_sessions]
             
-            for _ in range(week_sessions):
-                if not week_days:  # No more available days this week
-                    break
-                    
-                session_date = week_days.pop(0)
+            for day_index in session_days:
+                session_date = current_week_start + timedelta(days=day_index)
+                technique = techniques[week % len(techniques)]  # Rotate through techniques
                 
-                # Get next technique
-                if not techniques_cycle:
-                    techniques_cycle = techniques.copy()
-                technique = techniques_cycle.pop(0)
-                
-                # Get technique details
-                technique_info = self.technique_db.get_technique_info(technique)
-                
-                session = {
+                schedule.append({
                     "date": session_date.strftime("%Y-%m-%d"),
                     "day": session_date.strftime("%A"),
+                    "time": "14:00",
                     "activity": technique,
                     "type": therapy_type,
                     "duration": "50 minutes",
-                    "technique_details": technique_info
-                }
-                schedule.append(session)
-                session_count += 1
-            
-            week += 1
+                    "technique_details": self.technique_db.get_technique_info(technique)
+                })
+                
+                # Add homework/practice session
+                practice_date = session_date + timedelta(days=2)
+                schedule.append({
+                    "date": practice_date.strftime("%Y-%m-%d"),
+                    "day": practice_date.strftime("%A"),
+                    "time": "17:00",
+                    "activity": f"Practice: {technique}",
+                    "type": "Self-Practice",
+                    "duration": "30 minutes",
+                    "technique_details": self.technique_db.get_technique_info(technique)
+                })
 
-        # Debug print
-        print(f"Generated {len(schedule)} sessions")
-        return schedule 
+            # Weekly review session
+            week_end = current_week_start + timedelta(days=6)
+            schedule.append({
+                "date": week_end.strftime("%Y-%m-%d"),
+                "day": week_end.strftime("%A"),
+                "time": "19:00",
+                "activity": "Weekly Progress Review",
+                "type": "Self-Assessment",
+                "duration": "20 minutes",
+                "technique_details": self.technique_db.get_technique_info("General therapy session")
+            })
+
+        return sorted(schedule, key=lambda x: (x['date'], x['time'])) 

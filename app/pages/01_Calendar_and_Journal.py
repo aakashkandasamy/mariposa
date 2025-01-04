@@ -125,6 +125,41 @@ def show_technique_details(technique: dict, session: dict):
             st.markdown(f"**{exercise['name']}** ({exercise['duration']})")
             for instruction in exercise['instructions']:
                 st.markdown(f"\n• {instruction}")
+        
+        st.markdown("### Additional Resources")
+        for resource in technique.get('resources', []):
+            st.markdown(f"\n• [{resource['title']}]({resource['url']}) ({resource['type']})")
+
+def show_daily_schedule(sessions: List[Dict]):
+    """Display all sessions for a specific day"""
+    for session in sessions:
+        with st.expander(f"🕐 {session['time']} - {session['activity']} ({session['duration']})"):
+            st.markdown(f"**Type:** {session['type']}")
+            
+            technique_details = session.get('technique_details', {})
+            if technique_details:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### About this Technique")
+                    st.write(technique_details.get('description', ''))
+                    
+                    st.markdown("### Steps")
+                    for step in technique_details.get('steps', []):
+                        st.markdown(f"\n• {step}")
+                
+                with col2:
+                    st.markdown("### Today's Exercise")
+                    exercises = technique_details.get('exercises', [])
+                    if exercises:
+                        exercise = exercises[0]
+                        st.markdown(f"**{exercise['name']}** ({exercise['duration']})")
+                        for instruction in exercise['instructions']:
+                            st.markdown(f"\n• {instruction}")
+                    
+                    st.markdown("### Additional Resources")
+                    for resource in technique_details.get('resources', []):
+                        st.markdown(f"\n• [{resource['title']}]({resource['url']}) ({resource['type']})")
 
 def create_calendar_view(schedule: List[Dict]):
     """Create an interactive calendar view"""
@@ -144,11 +179,13 @@ def create_calendar_view(schedule: List[Dict]):
     # Create calendar
     cal = calendar.monthcalendar(year, month)
     
-    # Create schedule lookup
-    schedule_lookup = {
-        datetime.strptime(session['date'], "%Y-%m-%d").date(): session 
-        for session in schedule
-    }
+    # Create schedule lookup that groups sessions by date
+    schedule_lookup = {}
+    for session in schedule:
+        date = datetime.strptime(session['date'], "%Y-%m-%d").date()
+        if date not in schedule_lookup:
+            schedule_lookup[date] = []
+        schedule_lookup[date].append(session)
     
     # Display calendar
     st.markdown("### Therapy Calendar")
@@ -169,14 +206,10 @@ def create_calendar_view(schedule: List[Dict]):
             date = datetime(year, month, day).date()
             
             if date in schedule_lookup:
-                session = schedule_lookup[date]
+                sessions = schedule_lookup[date]
                 with cols[idx]:
-                    with st.expander(f"**{day}** 📅"):
-                        st.markdown(f"**Activity:** {session['activity']}")
-                        st.markdown(f"**Time:** {session['duration']}")
-                        
-                        if st.button("View Details", key=f"view_{date}"):
-                            st.session_state.selected_session = session
+                    with st.expander(f"**{day}** 📅 ({len(sessions)} activities)"):
+                        show_daily_schedule(sessions)
             else:
                 cols[idx].markdown(str(day))
     

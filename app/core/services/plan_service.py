@@ -3,8 +3,6 @@ from typing import List, Dict
 from app.core.models.schemas import PatientInput, TherapyPlan
 from app.core.services.research_service import ResearchService
 from app.core.utils.exceptions import NoMatchingConditionsError
-from app.core.services.technique_database import TechniqueDatabase
-import streamlit as st
 
 class TherapyPlanGenerator:
     def __init__(self):
@@ -19,71 +17,86 @@ class TherapyPlanGenerator:
         # Analyze symptoms to identify possible conditions
         condition_matches = self.research_service.analyze_symptoms(patient_input.symptoms)
         
-        # Store condition matches in session state for display
-        st.session_state.condition_details = {}
-        for condition, score, matching_criteria in condition_matches:
-            details = self.research_service.get_condition_details(condition, matching_criteria)
-            st.session_state.condition_details[condition] = details
+        # Get the most likely condition
+        if not condition_matches:
+            # Analyze the symptoms to provide specific suggestions
+            symptoms_length = len(patient_input.symptoms.split())
+            suggestions = []
+            
+            if symptoms_length < 10:
+                suggestions.append("Please provide a more detailed description of your symptoms")
+            
+            if "feel" not in patient_input.symptoms.lower():
+                suggestions.append("Describe how these symptoms make you feel")
+                
+            if "when" not in patient_input.symptoms.lower():
+                suggestions.append("Include when these symptoms typically occur")
+                
+            if "impact" not in patient_input.symptoms.lower() and "affect" not in patient_input.symptoms.lower():
+                suggestions.append("Explain how these symptoms impact your daily life")
+            
+            # Add general suggestions if no specific ones were generated
+            if not suggestions:
+                suggestions = [
+                    "Include how long you've been experiencing these symptoms",
+                    "Mention any triggers you've noticed",
+                    "Describe any changes in sleep, appetite, or energy levels",
+                    "Note any patterns in when symptoms get better or worse",
+                    "Include any past treatments or coping strategies you've tried"
+                ]
+            
+            raise NoMatchingConditionsError(patient_input.symptoms, suggestions)
         
         # Convert condition matches to the format needed for TherapyPlan
-        identified_conditions = [cond for cond, score, _ in condition_matches if score > 0.1]  # Lower threshold
-        if not identified_conditions:
-            identified_conditions = [condition_matches[0][0]]  # Take best match if none above threshold
-        
-        confidence_scores = {cond: score for cond, score, _ in condition_matches}
+        identified_conditions = [cond for cond, _ in condition_matches]
+        confidence_scores = {cond: score for cond, score in condition_matches}
         
         # Get primary condition (highest confidence)
         primary_condition = identified_conditions[0]
+        
+        # Get DSM-5 info for primary condition
         dsm5_info = self.research_service.get_dsm5_criteria(primary_condition)
         
-        # Determine session frequency based on severity and availability
-        available_days = len(patient_input.schedule.availability)
-        severity_level = patient_input.severity.value
-        
-        if severity_level == "severe":
-            sessions_per_week = min(2, available_days)  # Twice weekly if possible
-            session_frequency = "twice-weekly" if available_days >= 2 else "weekly"
-        elif severity_level == "moderate":
-            sessions_per_week = 1  # Weekly
-            session_frequency = "weekly"
-        else:  # low severity
-            sessions_per_week = 0.5  # Bi-weekly
-            session_frequency = "bi-weekly"
-        
-        # Adjust if not enough available days
-        if available_days < sessions_per_week:
-            session_frequency = "weekly"
-            sessions_per_week = 1
-        
-        # Get recommended techniques based on availability
-        all_techniques = dsm5_info.get("recommended_techniques", [
-            "Cognitive Behavioral Therapy",
+        # Get research articles for the condition
+        articles = self.research_service.get_scholarly_articles(primary_condition)
+        treatment_analysis = self.research_service.analyze_treatment_effectiveness(articles)
+
+        # Determine therapy type based on research
+        therapy_types = list(treatment_analysis.keys())
+        therapy_type = therapy_types[0] if therapy_types else "Cognitive Behavioral Therapy"
+
+        # Get session frequency based on severity
+        session_frequencies = {
+            "low": "bi-weekly",
+            "moderate": "weekly",
+            "severe": "twice-weekly"
+        }
+        session_frequency = session_frequencies[patient_input.severity.value]
+
+        # Generate goals based on DSM-5 criteria
+        goals = dsm5_info.get("treatment_goals", [
+            "Reduce symptom severity",
+            "Develop coping mechanisms",
+            "Improve daily functioning"
+        ])
+
+        # Get recommended techniques
+        techniques = dsm5_info.get("recommended_techniques", [
+            f"Regular {therapy_type} sessions",
             "Mindfulness exercises",
             "Behavioral activation",
-            "Stress management"
+            "Stress management techniques"
         ])
-        
-        # Validate and organize techniques
-        validated_techniques = []
-        technique_db = TechniqueDatabase()
-        
-        for technique in all_techniques:
-            technique_info = technique_db.get_technique_info(technique)
-            if technique_info:
-                validated_techniques.append(technique)
-        
-        # Ensure we have enough techniques for the schedule
-        while len(validated_techniques) < (sessions_per_week * 4):  # 4 weeks
-            validated_techniques.extend(validated_techniques[:])
-        
-        therapy_plan = TherapyPlan(
+
+        # Determine duration
+        duration = dsm5_info.get("recommended_duration", "12-16 weeks")
+
+        return TherapyPlan(
             identified_conditions=identified_conditions,
             confidence_scores=confidence_scores,
-            therapy_type=dsm5_info.get("name", "Cognitive Behavioral Therapy"),
+            therapy_type=therapy_type,
             session_frequency=session_frequency,
-            goals=dsm5_info.get("treatment_goals", ["Improve symptoms", "Develop coping skills"]),
-            techniques=validated_techniques,
-            duration=dsm5_info.get("recommended_duration", "12-16 weeks")
-        )
-
-        return therapy_plan 
+            goals=goals,
+            techniques=techniques,
+            duration=duration
+        ) 

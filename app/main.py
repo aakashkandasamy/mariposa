@@ -252,9 +252,7 @@ def main():
                         session_frequency=therapy_plan.session_frequency,
                         techniques=therapy_plan.techniques
                     )
-                    show_therapy_calendar(schedule)
-
-                    # In the main function, after generating the schedule:
+                    print("Generated schedule:", schedule)  # Debug print
                     st.session_state.therapy_schedule = schedule
 
                 except NoMatchingConditionsError as e:
