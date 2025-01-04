@@ -1,10 +1,13 @@
 import streamlit as st
-from app.core.models.schemas import PatientInput, SeverityLevel
+from app.core.models.schemas import PatientInput, Schedule
+from app.core.models.severity_level import SeverityLevel
 from app.core.services.plan_service import TherapyPlanGenerator
+from app.core.services.calendar_planner import TherapyCalendarPlanner
 from app.core.utils.exceptions import NoMatchingConditionsError
 from typing import List, Dict
 from datetime import datetime
-from app.core.services.calendar_planner import TherapyCalendarPlanner
+import pandas as pd
+import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Mariposa - Therapy Plan Optimizer",
@@ -165,13 +168,6 @@ def main():
                 "severe": "😟 Severely affecting daily life"
             }[x.value]
         )
-        
-        # Schedule Information
-        st.subheader("Availability")
-        availability = st.multiselect(
-            "Which days are you available?",
-            options=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        )
     
     with col2:
         with st.form("therapy_plan_form"):
@@ -179,8 +175,8 @@ def main():
             symptoms = st.text_area(
                 "Describe your symptoms",
                 height=200,
-                help="Please describe your symptoms, feelings, and experiences in detail. The more information you provide, the better we can help.",
-                placeholder="Example: I've been feeling anxious and overwhelmed for the past 3 months. My heart races when I'm in social situations..."
+                help="Please describe your symptoms, feelings, and experiences in detail.",
+                placeholder="Example: I've been feeling anxious and overwhelmed for the past 3 months..."
             )
 
             submitted = st.form_submit_button("Generate Therapy Plan")
@@ -190,15 +186,15 @@ def main():
                 if check_for_crisis(symptoms):
                     show_crisis_resources()
                 
-                if not all([symptoms, severity, availability]):
-                    st.error("Please fill in all fields")
+                if not symptoms:
+                    st.error("Please describe your symptoms")
                     return
 
-                # Create patient input
+                # Create patient input with empty schedule
                 patient_input = PatientInput(
                     symptoms=symptoms,
                     severity=severity,
-                    schedule={"availability": availability}
+                    schedule=Schedule(availability=[])  # Empty schedule
                 )
 
                 try:
@@ -247,10 +243,10 @@ def main():
                     # In the main function, after generating the therapy plan:
                     calendar_planner = TherapyCalendarPlanner()
                     schedule = calendar_planner.generate_weekly_schedule(
-                        availability=patient_input.schedule.availability,
                         therapy_type=therapy_plan.therapy_type,
                         session_frequency=therapy_plan.session_frequency,
-                        techniques=therapy_plan.techniques
+                        techniques=therapy_plan.techniques,
+                        severity=patient_input.severity
                     )
                     print("Generated schedule:", schedule)  # Debug print
                     st.session_state.therapy_schedule = schedule

@@ -1,11 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
-from enum import Enum
-
-class SeverityLevel(str, Enum):
-    LOW = "low"
-    MODERATE = "moderate"
-    SEVERE = "severe"
+from typing import List
+from app.core.models.severity_level import SeverityLevel
 
 class Schedule(BaseModel):
     availability: List[str]

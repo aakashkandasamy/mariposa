@@ -3,65 +3,22 @@ import calendar
 from datetime import datetime, timedelta
 import pandas as pd
 import plotly.graph_objects as go
-from textblob import TextBlob
 import nltk
 from typing import List, Dict
-
-# Download required NLTK data
-@st.cache_resource
-def download_nltk_data():
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt')
-    try:
-        nltk.data.find('taggers/averaged_perceptron_tagger')
-    except LookupError:
-        nltk.download('averaged_perceptron_tagger')
-
-# Download data at app startup
-download_nltk_data()
+from app.core.services.sentiment_analyzer import SentimentAnalyzer
 
 def analyze_journal_entry(text: str) -> dict:
-    """Analyze journal entry using TextBlob"""
+    """Analyze journal entry using our custom SentimentAnalyzer"""
     if not text:
         return None
     
-    # Sentiment analysis using TextBlob
-    analysis = TextBlob(text)
-    # TextBlob polarity ranges from -1 to 1, convert to 0 to 1 scale
-    sentiment_score = (analysis.sentiment.polarity + 1) / 2
-    
-    # Determine sentiment label
-    if sentiment_score > 0.6:
-        sentiment_label = "POSITIVE"
-    elif sentiment_score < 0.4:
-        sentiment_label = "NEGATIVE"
-    else:
-        sentiment_label = "NEUTRAL"
-    
-    # Basic text analysis
-    word_count = len(text.split())
-    
-    # Key phrase extraction (simplified)
-    negative_phrases = ["worried", "anxious", "sad", "depressed", "tired", "stress", "overwhelmed"]
-    positive_phrases = ["better", "happy", "improving", "hopeful", "grateful", "good", "calm"]
-    
-    negative_count = sum(text.lower().count(word) for word in negative_phrases)
-    positive_count = sum(text.lower().count(word) for word in positive_phrases)
-    
-    # Extract key topics
-    topics = [word.lower() for word, tag in analysis.tags if tag.startswith('NN')]
+    # Use our custom sentiment analyzer
+    analyzer = SentimentAnalyzer()
+    analysis = analyzer.analyze(text)
     
     return {
-        "sentiment": {
-            "score": sentiment_score,
-            "label": sentiment_label
-        },
-        "word_count": word_count,
-        "negative_phrases": negative_count,
-        "positive_phrases": positive_count,
-        "topics": topics[:5],  # Top 5 topics
+        "sentiment": analysis["sentiment"],
+        "details": analysis["details"],
         "date": datetime.now().strftime("%Y-%m-%d")
     }
 
@@ -79,7 +36,7 @@ def show_progress_charts(journal_entries):
     fig_sentiment = go.Figure()
     fig_sentiment.add_trace(go.Scatter(
         x=df['date'],
-        y=[entry['sentiment']['score'] for entry in df['sentiment']],
+        y=[entry['score'] for entry in df['sentiment']],
         mode='lines+markers',
         name='Sentiment Score'
     ))
@@ -90,15 +47,23 @@ def show_progress_charts(journal_entries):
     )
     st.plotly_chart(fig_sentiment)
     
-    # Create phrase comparison chart
+    # Create positive/negative word count chart
     fig_phrases = go.Figure(data=[
-        go.Bar(name='Positive Expressions', x=df['date'], y=df['positive_phrases']),
-        go.Bar(name='Negative Expressions', x=df['date'], y=df['negative_phrases'])
+        go.Bar(
+            name='Positive Words', 
+            x=df['date'], 
+            y=df['details'].apply(lambda x: x['positive_words'])
+        ),
+        go.Bar(
+            name='Negative Words', 
+            x=df['date'], 
+            y=df['details'].apply(lambda x: x['negative_words'])
+        )
     ])
     fig_phrases.update_layout(
         title='Expression Pattern Analysis',
         barmode='group',
-        yaxis_title='Frequency'
+        yaxis_title='Word Count'
     )
     st.plotly_chart(fig_phrases)
 
@@ -130,36 +95,55 @@ def show_technique_details(technique: dict, session: dict):
         for resource in technique.get('resources', []):
             st.markdown(f"\n• [{resource['title']}]({resource['url']}) ({resource['type']})")
 
-def show_daily_schedule(sessions: List[Dict]):
-    """Display all sessions for a specific day"""
+def show_daily_activities(sessions: List[Dict], date: datetime):
+    """Display activities and journal entries for a day"""
+    # Show journal entries first
+    if 'journal_entries' in st.session_state:
+        entries = [
+            entry for entry in st.session_state.journal_entries 
+            if entry['date'] == date.strftime("%Y-%m-%d")
+        ]
+        if entries:
+            st.markdown("#### 📝 Journal Entries")
+            for entry in entries:
+                st.markdown(f"**Time:** {entry['time']}")
+                st.markdown(f"**Mood Score:** {entry['sentiment']['score']:.2f}")
+                st.markdown(f"**Mood:** {entry['sentiment']['label']}")
+                st.markdown("**Entry:**")
+                st.write(entry['text'])
+                st.markdown("---")
+
+    # Show activities
+    st.markdown("#### 📅 Activities")
     for session in sessions:
-        with st.expander(f"🕐 {session['time']} - {session['activity']} ({session['duration']})"):
-            st.markdown(f"**Type:** {session['type']}")
+        st.markdown(f"**🕐 {session['time']} - {session['activity']} ({session['duration']})**")
+        st.markdown(f"Type: {session['type']}")
+        
+        technique_details = session.get('technique_details', {})
+        if technique_details:
+            col1, col2 = st.columns(2)
             
-            technique_details = session.get('technique_details', {})
-            if technique_details:
-                col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### About this Technique")
+                st.write(technique_details.get('description', ''))
                 
-                with col1:
-                    st.markdown("### About this Technique")
-                    st.write(technique_details.get('description', ''))
-                    
-                    st.markdown("### Steps")
-                    for step in technique_details.get('steps', []):
-                        st.markdown(f"\n• {step}")
+                st.markdown("### Steps")
+                for step in technique_details.get('steps', []):
+                    st.markdown(f"• {step}")
+            
+            with col2:
+                st.markdown("### Today's Exercise")
+                exercises = technique_details.get('exercises', [])
+                if exercises:
+                    exercise = exercises[0]
+                    st.markdown(f"**{exercise['name']}** ({exercise['duration']})")
+                    for instruction in exercise['instructions']:
+                        st.markdown(f"• {instruction}")
                 
-                with col2:
-                    st.markdown("### Today's Exercise")
-                    exercises = technique_details.get('exercises', [])
-                    if exercises:
-                        exercise = exercises[0]
-                        st.markdown(f"**{exercise['name']}** ({exercise['duration']})")
-                        for instruction in exercise['instructions']:
-                            st.markdown(f"\n• {instruction}")
-                    
-                    st.markdown("### Additional Resources")
-                    for resource in technique_details.get('resources', []):
-                        st.markdown(f"\n• [{resource['title']}]({resource['url']}) ({resource['type']})")
+                st.markdown("### Additional Resources")
+                for resource in technique_details.get('resources', []):
+                    st.markdown(f"• [{resource['title']}]({resource['url']}) ({resource['type']})")
+        st.markdown("---")
 
 def create_calendar_view(schedule: List[Dict]):
     """Create an interactive calendar view"""
@@ -187,6 +171,13 @@ def create_calendar_view(schedule: List[Dict]):
             schedule_lookup[date] = []
         schedule_lookup[date].append(session)
     
+    # Add journal entries to calendar
+    if 'journal_entries' in st.session_state:
+        for entry in st.session_state.journal_entries:
+            date = datetime.strptime(entry['date'], "%Y-%m-%d").date()
+            if date not in schedule_lookup:
+                schedule_lookup[date] = []
+    
     # Display calendar
     st.markdown("### Therapy Calendar")
     
@@ -196,6 +187,7 @@ def create_calendar_view(schedule: List[Dict]):
         cols[idx].markdown(f"**{day}**")
     
     # Display calendar weeks
+    selected_date = None
     for week in cal:
         cols = st.columns(7)
         for idx, day in enumerate(week):
@@ -205,22 +197,147 @@ def create_calendar_view(schedule: List[Dict]):
             
             date = datetime(year, month, day).date()
             
-            if date in schedule_lookup:
-                sessions = schedule_lookup[date]
-                with cols[idx]:
-                    with st.expander(f"**{day}** 📅 ({len(sessions)} activities)"):
-                        show_daily_schedule(sessions)
-            else:
-                cols[idx].markdown(str(day))
+            with cols[idx]:
+                has_journal = date in schedule_lookup
+                has_activities = any(isinstance(s, dict) and 'activity' in s 
+                                  for s in schedule_lookup.get(date, []))
+                
+                if has_journal or has_activities:
+                    if st.button(
+                        f"**{day}** {'📝' if has_journal else ''} {'📅' if has_activities else ''}",
+                        key=f"day_{date}"
+                    ):
+                        selected_date = date
+                else:
+                    st.markdown(str(day))
     
-    # Show selected session details
-    if 'selected_session' in st.session_state:
+    # Show selected day's activities
+    if selected_date and selected_date in schedule_lookup:
         st.markdown("---")
-        st.markdown("### Session Details")
-        show_technique_details(
-            st.session_state.selected_session.get('technique_details', {}),
-            st.session_state.selected_session
-        )
+        st.markdown(f"### Activities for {selected_date.strftime('%A, %B %d, %Y')}")
+        show_daily_activities(schedule_lookup[selected_date], selected_date)
+
+def show_schedule_view(schedule: List[Dict]):
+    """Display schedule in a day-by-day view"""
+    if not schedule:
+        st.info("No schedule available yet. Generate a therapy plan first!")
+        return
+
+    # Group sessions by week and day
+    weeks = {}
+    for session in schedule:
+        date = datetime.strptime(session['date'], "%Y-%m-%d")
+        week_num = (date - datetime.now()).days // 7 + 1
+        if week_num not in weeks:
+            weeks[week_num] = {}
+        
+        day = date.strftime("%Y-%m-%d")
+        if day not in weeks[week_num]:
+            weeks[week_num][day] = []
+        weeks[week_num][day].append(session)
+
+    # Display each week
+    for week_num in sorted(weeks.keys()):
+        with st.expander(f"Week {week_num}", expanded=True):
+            # Display each day
+            for day, sessions in sorted(weeks[week_num].items()):
+                date_obj = datetime.strptime(day, "%Y-%m-%d")
+                st.markdown(f"### {date_obj.strftime('%A, %B %d, %Y')}")
+                
+                # Create a table for daily schedule
+                schedule_data = []
+                for session in sorted(sessions, key=lambda x: x['time']):
+                    schedule_data.append([
+                        session['time'],
+                        session['activity'],
+                        session['type'],
+                        session['duration']
+                    ])
+                
+                if schedule_data:
+                    df = pd.DataFrame(
+                        schedule_data,
+                        columns=['Time', 'Activity', 'Type', 'Duration']
+                    )
+                    st.table(df)
+                
+                # Show detailed activities
+                show_daily_activities(sorted(sessions, key=lambda x: x['time']), date_obj)
+
+def show_journal_entry_form():
+    """Show the journal entry form"""
+    st.markdown("### New Journal Entry")
+    
+    # Date and time selection
+    col1, col2 = st.columns(2)
+    with col1:
+        entry_date = st.date_input("Date", datetime.now())
+    with col2:
+        entry_time = st.time_input("Time", datetime.now().time())
+    
+    # Journal text
+    journal_text = st.text_area(
+        "How are you feeling?",
+        height=150,
+        help="Write about your thoughts, feelings, and experiences."
+    )
+    
+    if st.button("Save Entry"):
+        if journal_text:
+            # Initialize sentiment analyzer
+            analyzer = SentimentAnalyzer()
+            analysis = analyzer.analyze(journal_text)
+            
+            # Create entry
+            entry = {
+                "date": entry_date.strftime("%Y-%m-%d"),
+                "time": entry_time.strftime("%H:%M"),
+                "text": journal_text,
+                **analysis
+            }
+            
+            # Initialize journal entries if not exists
+            if 'journal_entries' not in st.session_state:
+                st.session_state.journal_entries = []
+            
+            # Add entry
+            st.session_state.journal_entries.append(entry)
+            st.success("Journal entry saved!")
+            
+            # Show mood feedback
+            if analysis['sentiment']['label'] == 'NEGATIVE' and analysis['sentiment']['score'] < 0.3:
+                st.warning("""
+                I notice you're feeling down. Here are some suggestions:
+                - Try one of the recommended exercises from your therapy plan
+                - Practice a mindfulness exercise
+                - Reach out to your support network
+                - Consider scheduling an extra therapy session
+                """)
+
+def show_journal_history(journal_entries):
+    """Display journal history without nested expanders"""
+    st.markdown("### Journal History")
+    
+    # Group entries by date
+    entries_by_date = {}
+    for entry in reversed(journal_entries):
+        date = entry['date']
+        if date not in entries_by_date:
+            entries_by_date[date] = []
+        entries_by_date[date].append(entry)
+    
+    # Display entries grouped by date
+    for date, entries in entries_by_date.items():
+        st.markdown(f"#### {date}")
+        for entry in entries:
+            st.markdown(f"**Time:** {entry['time']}")
+            st.write(entry['text'])
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.progress(entry['sentiment']['score'])
+            with col2:
+                st.write(f"Mood: {entry['sentiment']['label']}")
+        st.markdown("---")
 
 def main():
     st.title("🗓️ Therapy Calendar & Journal")
@@ -234,16 +351,31 @@ def main():
     
     with calendar_tab:
         st.markdown("### Your Therapy Schedule")
+        
+        # Add view selection
+        view_type = st.radio(
+            "Select View",
+            ["Daily Schedule", "Calendar View"],
+            horizontal=True
+        )
+        
         if 'therapy_schedule' in st.session_state:
-            create_calendar_view(st.session_state.therapy_schedule)
-            
-            st.markdown("### All Sessions")
-            for session in st.session_state.therapy_schedule:
-                with st.expander(f"📅 {session['date']} - {session['activity']}"):
-                    show_technique_details(session.get('technique_details', {}), session)
+            if view_type == "Daily Schedule":
+                show_schedule_view(st.session_state.therapy_schedule)
+            else:
+                create_calendar_view(st.session_state.therapy_schedule)
+        else:
+            st.info("Please generate a therapy plan to see your schedule.")
     
     with journal_tab:
         st.markdown("### Daily Journal")
+        
+        # Date and time selection
+        col1, col2 = st.columns(2)
+        with col1:
+            entry_date = st.date_input("Date", datetime.now())
+        with col2:
+            entry_time = st.time_input("Time", datetime.now().time())
         
         # Journal entry
         journal_text = st.text_area(
@@ -257,14 +389,16 @@ def main():
                 analysis = analyze_journal_entry(journal_text)
                 entry = {
                     "text": journal_text,
-                    **analysis
+                    "date": entry_date.strftime("%Y-%m-%d"),
+                    "time": entry_time.strftime("%H:%M"),
+                    "sentiment": analysis["sentiment"],
+                    "details": analysis["details"]
                 }
                 st.session_state.journal_entries.append(entry)
                 st.success("Journal entry saved!")
                 
                 # Provide feedback based on analysis
-                sentiment = analysis['sentiment']
-                if sentiment['label'] == 'NEGATIVE' and sentiment['score'] < 0.3:
+                if analysis['sentiment']['label'] == 'NEGATIVE' and analysis['sentiment']['score'] < 0.3:
                     st.warning("""
                     I notice you're feeling down. Here are some suggestions:
                     - Try one of the recommended exercises from your therapy plan
@@ -279,13 +413,7 @@ def main():
         
         # Show detailed journal history
         if st.session_state.journal_entries:
-            st.markdown("### Journal History")
-            for entry in reversed(st.session_state.journal_entries):
-                with st.expander(f"Entry from {entry['date']}"):
-                    st.write(entry['text'])
-                    st.markdown("**Sentiment Analysis:**")
-                    st.progress(entry['sentiment']['score'])
-                    st.write(f"Mood: {entry['sentiment']['label']}")
+            show_journal_history(st.session_state.journal_entries)
 
 if __name__ == "__main__":
     main() 

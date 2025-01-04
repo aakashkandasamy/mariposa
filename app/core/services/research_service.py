@@ -1,4 +1,3 @@
-import scholarly
 import json
 import os
 from typing import List, Dict, Tuple

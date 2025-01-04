@@ -1,8 +1,10 @@
 import json
 from typing import List, Dict
+import streamlit as st
 from app.core.models.schemas import PatientInput, TherapyPlan
 from app.core.services.research_service import ResearchService
 from app.core.utils.exceptions import NoMatchingConditionsError
+from app.core.services.calendar_planner import TherapyCalendarPlanner
 
 class TherapyPlanGenerator:
     def __init__(self):
@@ -90,6 +92,17 @@ class TherapyPlanGenerator:
 
         # Determine duration
         duration = dsm5_info.get("recommended_duration", "12-16 weeks")
+
+        # Create schedule with severity-based adjustments
+        calendar_planner = TherapyCalendarPlanner()
+        schedule = calendar_planner.generate_weekly_schedule(
+            therapy_type=therapy_type,
+            session_frequency=session_frequency,
+            techniques=techniques,
+            severity=patient_input.severity
+        )
+        
+        st.session_state.therapy_schedule = schedule
 
         return TherapyPlan(
             identified_conditions=identified_conditions,
