@@ -1,0 +1,189 @@
+{
+  "anxiety": {
+    "name": "Generalized Anxiety Disorder",
+    "diagnostic_criteria": [
+      "Excessive anxiety and worry occurring more days than not for at least 6 months",
+      "Difficulty controlling worry",
+      "Restlessness or feeling keyed up or on edge",
+      "Being easily fatigued",
+      "Difficulty concentrating or mind going blank",
+      "Irritability",
+      "Muscle tension",
+      "Sleep disturbance",
+      "Social anxiety",
+      "Heart racing",
+      "Avoiding social situations",
+      "Morning anxiety",
+      "Work performance affected",
+      "Trouble sleeping",
+      "Fatigue",
+      "Deep breathing exercises attempted"
+    ],
+    "treatment_goals": [
+      "Reduce anxiety symptoms in social situations",
+      "Improve sleep quality",
+      "Develop effective coping mechanisms",
+      "Enhance work performance",
+      "Build social confidence"
+    ],
+    "recommended_techniques": [
+      "Cognitive Behavioral Therapy (CBT)",
+      "Progressive Muscle Relaxation",
+      "Advanced Breathing Techniques",
+      "Exposure Therapy",
+      "Mindfulness Meditation",
+      "Sleep Hygiene Practices"
+    ],
+    "recommended_duration": "12-16 weeks",
+    "session_frequency": {
+      "low": "bi-weekly",
+      "moderate": "weekly",
+      "severe": "twice-weekly"
+    }
+  },
+  "social_anxiety": {
+    "name": "Social Anxiety Disorder",
+    "diagnostic_criteria": [
+      "Marked fear or anxiety about social situations",
+      "Fear of negative evaluation",
+      "Heart racing in social situations",
+      "Avoidance of social interactions",
+      "Physical symptoms in social settings",
+      "Work or social life impairment",
+      "Morning anxiety",
+      "Performance anxiety",
+      "Anticipatory anxiety",
+      "Social isolation"
+    ],
+    "treatment_goals": [
+      "Reduce social anxiety symptoms",
+      "Build social confidence",
+      "Develop social skills",
+      "Improve work/school performance",
+      "Reduce avoidance behaviors"
+    ],
+    "recommended_techniques": [
+      "Social Skills Training",
+      "Gradual Exposure Therapy",
+      "Cognitive Restructuring",
+      "Role-Playing Exercises",
+      "Relaxation Techniques"
+    ],
+    "recommended_duration": "16-20 weeks",
+    "session_frequency": {
+      "low": "bi-weekly",
+      "moderate": "weekly",
+      "severe": "twice-weekly"
+    }
+  },
+  "panic": {
+    "name": "Panic Disorder",
+    "diagnostic_criteria": [
+      "Recurrent unexpected panic attacks",
+      "Heart palpitations or racing",
+      "Sweating",
+      "Trembling or shaking",
+      "Shortness of breath",
+      "Feelings of impending doom",
+      "Fear of losing control",
+      "Avoidance behavior",
+      "Sleep disturbance",
+      "Morning anxiety"
+    ],
+    "treatment_goals": [
+      "Reduce frequency of panic attacks",
+      "Manage physical symptoms",
+      "Reduce avoidance behaviors",
+      "Improve daily functioning",
+      "Develop emergency coping strategies"
+    ],
+    "recommended_techniques": [
+      "Panic-Focused CBT",
+      "Breathing Retraining",
+      "Interoceptive Exposure",
+      "Applied Relaxation",
+      "Mindfulness-Based Stress Reduction"
+    ],
+    "recommended_duration": "12-14 weeks",
+    "session_frequency": {
+      "low": "bi-weekly",
+      "moderate": "weekly",
+      "severe": "twice-weekly"
+    }
+  },
+  "depression": {
+    "name": "Major Depressive Disorder",
+    "diagnostic_criteria": [
+      "Depressed mood",
+      "Feeling sad or empty",
+      "Loss of interest in activities",
+      "Suicidal thoughts or ideation",
+      "Feelings of worthlessness",
+      "Changes in sleep patterns",
+      "Changes in appetite",
+      "Loss of energy",
+      "Difficulty concentrating",
+      "Feeling hopeless",
+      "Death thoughts",
+      "Self-harm thoughts",
+      "Social withdrawal",
+      "Fatigue",
+      "Feeling depressed"
+    ],
+    "treatment_goals": [
+      "Ensure immediate safety and support",
+      "Reduce depressive symptoms",
+      "Develop coping strategies",
+      "Build support network",
+      "Improve mood stability"
+    ],
+    "recommended_techniques": [
+      "Crisis Intervention",
+      "Cognitive Behavioral Therapy (CBT)",
+      "Dialectical Behavior Therapy (DBT)",
+      "Medication Management",
+      "Support Group Participation"
+    ],
+    "recommended_duration": "16-20 weeks",
+    "session_frequency": {
+      "low": "weekly",
+      "moderate": "twice-weekly",
+      "severe": "intensive outpatient"
+    }
+  },
+  "crisis": {
+    "name": "Crisis/Suicidal Ideation",
+    "diagnostic_criteria": [
+      "Suicidal thoughts",
+      "Thoughts of death",
+      "Wanting to die",
+      "Feeling hopeless",
+      "Feeling like a burden",
+      "Wanting to end life",
+      "Self-harm thoughts",
+      "Suicide planning",
+      "Feeling trapped",
+      "Extreme depression"
+    ],
+    "treatment_goals": [
+      "Immediate safety planning",
+      "Crisis stabilization",
+      "24/7 support access",
+      "Reduce immediate risk",
+      "Build safety network"
+    ],
+    "recommended_techniques": [
+      "Immediate Crisis Intervention",
+      "Safety Planning",
+      "24/7 Crisis Support",
+      "Intensive Therapy",
+      "Psychiatric Evaluation"
+    ],
+    "recommended_duration": "Immediate and ongoing",
+    "session_frequency": {
+      "low": "intensive support",
+      "moderate": "intensive support",
+      "severe": "immediate intervention"
+    }
+  }
+} 

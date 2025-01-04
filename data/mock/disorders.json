@@ -1,0 +1,22 @@
+{
+  "anxiety": {
+    "name": "Anxiety Disorder",
+    "recommended_therapies": ["CBT", "Mindfulness", "Exposure Therapy"],
+    "typical_duration": "12-16 weeks",
+    "session_frequency": {
+      "low": "bi-weekly",
+      "moderate": "weekly",
+      "severe": "twice-weekly"
+    }
+  },
+  "depression": {
+    "name": "Major Depressive Disorder",
+    "recommended_therapies": ["CBT", "IPT", "Behavioral Activation"],
+    "typical_duration": "16-20 weeks",
+    "session_frequency": {
+      "low": "bi-weekly",
+      "moderate": "weekly",
+      "severe": "twice-weekly"
+    }
+  }
+} 
