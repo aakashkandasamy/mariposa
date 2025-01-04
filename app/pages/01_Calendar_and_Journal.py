@@ -385,16 +385,6 @@ def show_journal_history(journal_entries):
             
             st.markdown("---")
 
-def test_api_connection():
-    st.markdown("### Testing API Connection")
-    analyzer = SentimentAnalyzer()
-    
-    with st.spinner("Testing OpenAI API connection..."):
-        if analyzer.test_connection():
-            st.success("✅ OpenAI API connection successful!")
-        else:
-            st.error("❌ OpenAI API connection failed. Please check your API key and billing status.")
-
 def main():
     st.title("🗓️ Therapy Calendar & Journal")
     
@@ -470,10 +460,6 @@ def main():
         # Show detailed journal history
         if st.session_state.journal_entries:
             show_journal_history(st.session_state.journal_entries)
-
-    # Add this at the start of the main() function:
-    if st.sidebar.button("Test API Connection"):
-        test_api_connection()
 
 if __name__ == "__main__":
     main() 

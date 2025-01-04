@@ -1,128 +1,141 @@
 from typing import Dict
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
-import json
-
-load_dotenv()
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import re
 
 class SentimentAnalyzer:
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            print("Warning: OpenAI API key not found in environment variables")
-        self.client = OpenAI(api_key=api_key)
+        # Download required NLTK data
+        try:
+            nltk.data.find('vader_lexicon')
+            nltk.data.find('punkt')
+            nltk.data.find('stopwords')
+        except LookupError:
+            nltk.download('vader_lexicon')
+            nltk.download('punkt')
+            nltk.download('stopwords')
         
-        # Prompt template for sentiment analysis
-        self.prompt_template = """
-        Analyze the following journal entry for emotional sentiment and mental health indicators.
-        Provide a detailed analysis including:
-        1. Overall sentiment (positive/negative/neutral)
-        2. Emotional state score (0-10, where 0 is severely distressed and 10 is very positive)
-        3. Key emotions detected
-        4. Risk indicators (if any)
-        5. Brief reasoning for the analysis
+        self.sia = SentimentIntensityAnalyzer()
+        self.emotion_keywords = {
+            'joy': ['happy', 'excited', 'delighted', 'joyful', 'pleased', 'grateful'],
+            'sadness': ['sad', 'depressed', 'unhappy', 'miserable', 'down', 'blue'],
+            'anger': ['angry', 'frustrated', 'irritated', 'annoyed', 'furious'],
+            'anxiety': ['anxious', 'worried', 'nervous', 'stressed', 'tense'],
+            'fear': ['scared', 'afraid', 'terrified', 'fearful', 'panicked'],
+            'hope': ['hopeful', 'optimistic', 'looking forward', 'confident'],
+            'calm': ['peaceful', 'relaxed', 'serene', 'tranquil', 'calm']
+        }
+        
+        self.risk_keywords = {
+            'high': ['suicide', 'kill myself', 'end my life', 'want to die', 'better off dead'],
+            'medium': ['hopeless', 'worthless', 'can\'t go on', 'give up', 'no point'],
+            'low': ['exhausted', 'overwhelmed', 'struggling', 'difficult', 'hard time']
+        }
 
-        Journal entry: "{text}"
+    def detect_emotions(self, text: str) -> list:
+        """Detect emotions present in the text"""
+        text = text.lower()
+        detected_emotions = []
+        
+        for emotion, keywords in self.emotion_keywords.items():
+            if any(keyword in text for keyword in keywords):
+                detected_emotions.append(emotion)
+        
+        return detected_emotions if detected_emotions else ['neutral']
 
-        Return your analysis in valid JSON format with these exact keys:
-        {{
-            "sentiment": "positive/negative/neutral",
-            "score": <number between 0-10>,
-            "emotions": ["emotion1", "emotion2"],
-            "risk_level": "none/low/medium/high",
-            "reasoning": "brief explanation",
-            "suggestions": ["suggestion1", "suggestion2"]
-        }}
-        """
+    def assess_risk_level(self, text: str) -> str:
+        """Assess risk level based on keywords"""
+        text = text.lower()
+        
+        for level, keywords in self.risk_keywords.items():
+            if any(keyword in text for keyword in keywords):
+                return level
+        return 'none'
+
+    def get_suggestions(self, sentiment_score: float, emotions: list, risk_level: str) -> list:
+        """Generate suggestions based on analysis"""
+        suggestions = []
+        
+        if sentiment_score < 0.4:
+            suggestions.extend([
+                "Consider reaching out to a trusted friend or family member",
+                "Try some deep breathing exercises",
+                "Take a short walk or get some light exercise"
+            ])
+        
+        if 'anxiety' in emotions or 'fear' in emotions:
+            suggestions.extend([
+                "Practice grounding techniques (5-4-3-2-1 method)",
+                "Try progressive muscle relaxation",
+                "Write down your worries and challenge negative thoughts"
+            ])
+            
+        if risk_level != 'none':
+            suggestions.extend([
+                "Please speak with a mental health professional",
+                "Contact a crisis helpline for immediate support",
+                "Don't hesitate to reach out for help"
+            ])
+            
+        return suggestions if suggestions else ["Continue your current positive practices"]
 
     def analyze(self, text: str) -> Dict:
-        """Analyze the sentiment of a text using GPT"""
+        """Analyze the sentiment of a text"""
         try:
-            # Check for API key first
-            if not self.client.api_key:
-                raise ValueError("OpenAI API key not configured")
-
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are a mental health professional analyzing patient journal entries. Always respond with valid JSON."
-                    },
-                    {
-                        "role": "user", 
-                        "content": self.prompt_template.format(text=text)
-                    }
-                ],
-                temperature=0.3,
-            )
+            # Get VADER sentiment scores
+            scores = self.sia.polarity_scores(text)
             
-            try:
-                response_text = response.choices[0].message.content.strip()
-                analysis = json.loads(response_text)
-                
-                normalized_score = analysis['score'] / 10.0
-                return {
-                    "sentiment": {
-                        "score": normalized_score,
-                        "label": analysis['sentiment'].upper(),
-                        "emotions": analysis['emotions'],
-                        "risk_level": analysis['risk_level']
-                    },
-                    "details": {
-                        "reasoning": analysis['reasoning'],
-                        "suggestions": analysis['suggestions']
-                    }
-                }
-                
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON response: {str(e)}")
-                print(f"Raw response: {response_text}")
-                raise
-                
-        except Exception as e:
-            error_msg = str(e)
-            if "billing_not_active" in error_msg:
-                return {
-                    "sentiment": {
-                        "score": 0.5,
-                        "label": "NEUTRAL",
-                        "emotions": ["not available"],
-                        "risk_level": "unknown"
-                    },
-                    "details": {
-                        "reasoning": "OpenAI API billing not active. Please set up billing at https://platform.openai.com/account/billing",
-                        "suggestions": [
-                            "Set up OpenAI API billing",
-                            "Ensure API key is correctly configured",
-                            "Contact administrator for assistance"
-                        ]
-                    }
-                }
+            # Normalize compound score to 0-1 range
+            normalized_score = (scores['compound'] + 1) / 2
+            
+            # Determine sentiment label
+            if normalized_score > 0.6:
+                sentiment_label = "POSITIVE"
+            elif normalized_score < 0.4:
+                sentiment_label = "NEGATIVE"
             else:
-                print(f"Error in sentiment analysis: {error_msg}")
-                return {
-                    "sentiment": {
-                        "score": 0.5,
-                        "label": "NEUTRAL",
-                        "emotions": ["unknown"],
-                        "risk_level": "unknown"
-                    },
-                    "details": {
-                        "reasoning": f"Error in analysis: {error_msg}",
-                        "suggestions": ["Please try again"]
-                    }
-                } 
-
-    def test_connection(self) -> bool:
-        """Test the OpenAI API connection"""
-        try:
-            # Try a simple test analysis
-            test_response = self.analyze("This is a test message to verify the API connection.")
-            if test_response.get('sentiment', {}).get('label') != "NEUTRAL":
-                return True
-            return False
+                sentiment_label = "NEUTRAL"
+            
+            # Detect emotions and risk level
+            emotions = self.detect_emotions(text)
+            risk_level = self.assess_risk_level(text)
+            
+            # Generate suggestions
+            suggestions = self.get_suggestions(normalized_score, emotions, risk_level)
+            
+            # Generate reasoning
+            reasoning = f"Analysis shows {sentiment_label.lower()} sentiment"
+            if emotions != ['neutral']:
+                reasoning += f" with detected emotions: {', '.join(emotions)}"
+            if risk_level != 'none':
+                reasoning += f". Risk level: {risk_level}"
+            
+            return {
+                "sentiment": {
+                    "score": normalized_score,
+                    "label": sentiment_label,
+                    "emotions": emotions,
+                    "risk_level": risk_level
+                },
+                "details": {
+                    "reasoning": reasoning,
+                    "suggestions": suggestions
+                }
+            }
+            
         except Exception as e:
-            print(f"Connection test failed: {str(e)}")
-            return False 
+            print(f"Error in sentiment analysis: {str(e)}")
+            return {
+                "sentiment": {
+                    "score": 0.5,
+                    "label": "NEUTRAL",
+                    "emotions": ["unknown"],
+                    "risk_level": "unknown"
+                },
+                "details": {
+                    "reasoning": f"Error in analysis: {str(e)}",
+                    "suggestions": ["Please try again"]
+                }
+            } 
