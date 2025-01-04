@@ -1,91 +1,80 @@
 from typing import Dict
-import re
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class SentimentAnalyzer:
     def __init__(self):
-        # Define positive and negative word lists
-        self.positive_words = {
-            'happy', 'good', 'great', 'better', 'improving', 'hopeful', 'calm',
-            'peaceful', 'relaxed', 'confident', 'energetic', 'motivated', 'positive',
-            'accomplished', 'proud', 'grateful', 'thankful', 'relieved', 'joy',
-            'excited', 'optimistic', 'strong', 'supported', 'capable', 'progress'
-        }
+        openai.api_key = os.getenv("OPENAI_API_KEY")
         
-        self.negative_words = {
-            'sad', 'bad', 'worse', 'anxious', 'worried', 'stressed', 'depressed',
-            'tired', 'exhausted', 'overwhelmed', 'afraid', 'scared', 'hopeless',
-            'lonely', 'frustrated', 'angry', 'upset', 'confused', 'worthless',
-            'guilty', 'ashamed', 'stuck', 'terrible', 'miserable', 'panic'
-        }
+        # Prompt template for sentiment analysis
+        self.prompt_template = """
+        Analyze the following journal entry for emotional sentiment and mental health indicators.
+        Provide a detailed analysis including:
+        1. Overall sentiment (positive/negative/neutral)
+        2. Emotional state score (0-10, where 0 is severely distressed and 10 is very positive)
+        3. Key emotions detected
+        4. Risk indicators (if any)
+        5. Brief reasoning for the analysis
 
-        # Intensity modifiers
-        self.intensifiers = {
-            'very': 1.5,
-            'really': 1.5,
-            'extremely': 2.0,
-            'completely': 2.0,
-            'totally': 2.0,
-            'absolutely': 2.0,
-            'deeply': 1.5,
-            'quite': 1.2,
-            'somewhat': 0.8,
-            'little': 0.5,
-            'bit': 0.5
-        }
+        Journal entry: "{text}"
+
+        Respond in the following JSON format:
+        {{
+            "sentiment": "positive/negative/neutral",
+            "score": 0-10,
+            "emotions": ["emotion1", "emotion2", ...],
+            "risk_level": "none/low/medium/high",
+            "reasoning": "brief explanation",
+            "suggestions": ["suggestion1", "suggestion2", ...]
+        }}
+        """
 
     def analyze(self, text: str) -> Dict:
-        """Analyze the sentiment of a text"""
-        words = text.lower().split()
-        
-        # Initialize scores
-        positive_score = 0
-        negative_score = 0
-        modifier = 1.0
-        
-        for i, word in enumerate(words):
-            # Clean the word
-            word = re.sub(r'[^\w\s]', '', word)
+        """Analyze the sentiment of a text using GPT"""
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a mental health professional analyzing patient journal entries."},
+                    {"role": "user", "content": self.prompt_template.format(text=text)}
+                ],
+                temperature=0.3,  # Lower temperature for more consistent analysis
+            )
             
-            # Check for intensifiers
-            if i > 0:
-                prev_word = re.sub(r'[^\w\s]', '', words[i-1])
-                modifier = self.intensifiers.get(prev_word, 1.0)
+            # Parse the response
+            analysis = eval(response.choices[0].message.content)
             
-            # Update scores
-            if word in self.positive_words:
-                positive_score += 1 * modifier
-            elif word in self.negative_words:
-                negative_score += 1 * modifier
+            # Normalize score to 0-1 range for consistency with UI
+            normalized_score = analysis['score'] / 10.0
             
-            # Reset modifier
-            modifier = 1.0
-        
-        # Calculate final sentiment score (-1 to 1)
-        total_words = len(words)
-        if total_words == 0:
-            sentiment_score = 0
-        else:
-            sentiment_score = (positive_score - negative_score) / (positive_score + negative_score + 1)
-        
-        # Normalize to 0-1 range
-        normalized_score = (sentiment_score + 1) / 2
-        
-        # Determine sentiment label
-        if normalized_score > 0.6:
-            label = "POSITIVE"
-        elif normalized_score < 0.4:
-            label = "NEGATIVE"
-        else:
-            label = "NEUTRAL"
-
-        return {
-            "sentiment": {
-                "score": normalized_score,
-                "label": label
-            },
-            "details": {
-                "positive_words": positive_score,
-                "negative_words": negative_score,
-                "total_words": total_words
+            return {
+                "sentiment": {
+                    "score": normalized_score,
+                    "label": analysis['sentiment'].upper(),
+                    "emotions": analysis['emotions'],
+                    "risk_level": analysis['risk_level']
+                },
+                "details": {
+                    "reasoning": analysis['reasoning'],
+                    "suggestions": analysis['suggestions']
+                }
             }
-        } 
+            
+        except Exception as e:
+            print(f"Error in sentiment analysis: {str(e)}")
+            # Fallback to basic analysis
+            return {
+                "sentiment": {
+                    "score": 0.5,
+                    "label": "NEUTRAL",
+                    "emotions": ["unknown"],
+                    "risk_level": "unknown"
+                },
+                "details": {
+                    "reasoning": "Error in analysis",
+                    "suggestions": ["Please try again"]
+                }
+            } 

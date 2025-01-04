@@ -315,7 +315,7 @@ def show_journal_entry_form():
                 """)
 
 def show_journal_history(journal_entries):
-    """Display journal history without nested expanders"""
+    """Display journal history with detailed analysis"""
     st.markdown("### Journal History")
     
     # Group entries by date
@@ -332,12 +332,25 @@ def show_journal_history(journal_entries):
         for entry in entries:
             st.markdown(f"**Time:** {entry['time']}")
             st.write(entry['text'])
+            
+            # Show sentiment analysis
             col1, col2 = st.columns([3, 1])
             with col1:
                 st.progress(entry['sentiment']['score'])
+                st.write(f"Emotions detected: {', '.join(entry['sentiment']['emotions'])}")
             with col2:
                 st.write(f"Mood: {entry['sentiment']['label']}")
-        st.markdown("---")
+                if entry['sentiment']['risk_level'] != 'none':
+                    st.warning(f"Risk Level: {entry['sentiment']['risk_level']}")
+            
+            # Show analysis details
+            with st.expander("Analysis Details"):
+                st.write("**Analysis:**", entry['details']['reasoning'])
+                st.write("**Suggestions:**")
+                for suggestion in entry['details']['suggestions']:
+                    st.write(f"• {suggestion}")
+            
+            st.markdown("---")
 
 def main():
     st.title("🗓️ Therapy Calendar & Journal")
