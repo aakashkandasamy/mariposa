@@ -3,6 +3,5 @@ pandas
 numpy
 scikit-learn
 plotly
-python-dotenv
 pydantic
 nltk
