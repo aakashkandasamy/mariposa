@@ -161,9 +161,8 @@ def main():
         # Severity Selection outside the form for better UX
         severity = st.radio(
             "How severely do these symptoms affect your daily life?",
-            options=[SeverityLevel.NONE, SeverityLevel.LOW, SeverityLevel.MODERATE, SeverityLevel.SEVERE],
+            options=[SeverityLevel.LOW, SeverityLevel.MODERATE, SeverityLevel.SEVERE],
             format_func=lambda x: {
-                "none": "🙂 It does not affect my daily life",
                 "low": "😊 Mildly affecting daily life",
                 "moderate": "😐 Moderately affecting daily life",
                 "severe": "😟 Severely affecting daily life"
